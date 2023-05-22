@@ -1,3 +1,4 @@
+#![allow(clippy::module_name_repetitions)]
 pub struct PublicUncallable;
 
 pub trait Sealed<P> {}

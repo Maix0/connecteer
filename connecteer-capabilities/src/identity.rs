@@ -62,28 +62,14 @@ impl<Payload: Serialize + DeserializeOwned + 'static> Connection<Wrapper<Payload
     type SendError = core::convert::Infallible;
     type ReceiveError = core::convert::Infallible;
 
-    type SendGen<'s, 'c, 'g> = SingleGen<Result<Payload, Self::SendError>>;
-    type ReceiveGen<'s, 'c, 'g> = SingleGen<Result<Payload, Self::ReceiveError>>;
-    fn send<'a, 'b, 'g>(
-        input: Wrapper<Payload>,
-        _: crate::sealed::PublicUncallable,
-    ) -> Self::SendGen<'a, 'b, 'g>
-    where
-        Self: 'a,
-        Self::Ctx: 'b,
-    {
+    type SendGen = SingleGen<Result<Payload, Self::SendError>>;
+    type ReceiveGen = SingleGen<Result<Wrapper<Payload>, Self::ReceiveError>>;
+    fn send(input: Wrapper<Payload>, _: crate::sealed::PublicUncallable) -> Self::SendGen {
         SingleGen(Some(Ok(input.into_inner())))
     }
 
-    fn receive<'a, 'b, 'g>(
-        output: Result<Wrapper<Payload>, Self::NextError>,
-        _: crate::sealed::PublicUncallable,
-    ) -> Self::ReceiveGen<'a, 'b, 'g>
-    where
-        Self::Ctx: 'b,
-        Self: 'a,
-    {
-        SingleGen(Some(Ok(output.unwrap().into_inner())))
+    fn receive(output: Self::Wrapped, _: crate::sealed::PublicUncallable) -> Self::ReceiveGen {
+        SingleGen(Some(Ok(Wrapper(output))))
     }
 }
 /// This is the "Base" of all [`Middleware`](crate::Middleware) chain.
@@ -99,16 +85,14 @@ impl<Payload: DeserializeOwned + Serialize + 'static> Middleware<Payload> for Ba
     type Ctx = ();
     type Next = Identity;
 
-    type WrapGen<'s, 'c, 'g> = SingleGen<Result<Self::Message, Self::WrapError>>;
-    type UnwrapGen<'s, 'c, 'g> = SingleGen<Result<Payload, Self::UnwrapError>>;
+    type WrapGen = SingleGen<Result<Self::Message, Self::WrapError>>;
+    type UnwrapGen = SingleGen<Result<Payload, Self::UnwrapError>>;
 
-    fn wrap<'a, 'b, 'g, Uncallable: PublicUncallable>(msg: Payload) -> Self::WrapGen<'a, 'b, 'g> {
+    fn wrap<Uncallable: PublicUncallable>(msg: Payload) -> Self::WrapGen {
         SingleGen(Some(Ok(Wrapper(msg))))
     }
 
-    fn unwrap<'a, 'b, 'g, Uncallable: PublicUncallable>(
-        msg: Self::Message,
-    ) -> Self::UnwrapGen<'a, 'b, 'g> {
+    fn unwrap<Uncallable: PublicUncallable>(msg: Self::Message) -> Self::UnwrapGen {
         SingleGen(Some(Ok(msg.into_inner())))
     }
 
@@ -125,14 +109,6 @@ impl<Payload: DeserializeOwned + Serialize + 'static> Middleware<Payload> for Ba
     ) -> Self::UnwrapError {
         err
     }
-
-    fn create_unwrap_error_passthrough<Uncallable: PublicUncallable>(
-        &mut self,
-        err: core::convert::Infallible,
-    ) -> Self::UnwrapError {
-        err
-    }
-
     fn get_next_ctx<Uncallable: PublicUncallable>(
         _: &mut Self::Ctx,
     ) -> &mut <Self::Next as Connection<Self::Message>>::Ctx {

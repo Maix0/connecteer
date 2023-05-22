@@ -4,6 +4,7 @@
 //#![warn(clippy::pedantic)]
 
 mod connection;
+pub mod gen_utils;
 pub mod identity;
 mod middleware;
 mod pipeline;
