@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["PublicUncallable"],"trait":["PublicUncallableSealed","Sealed"]};

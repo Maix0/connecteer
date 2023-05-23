@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["higher_order_gen"],"mod":["connection","gen_utils","identity","middleware","pipeline","sealed"],"struct":["Pipeline"],"trait":["Connection","Middleware"]};

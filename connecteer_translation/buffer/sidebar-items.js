@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["with_std"],"struct":["BufferRead","RingBuffer"],"trait":["Buffer"]};
