@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["fuck_mut"],"opaque":[""],"trait":["Middleware","PublicUncallable"]};
+window.SIDEBAR_ITEMS = {"macro":["yield_"],"opaque":[""],"trait":["Middleware","PublicUncallable"]};

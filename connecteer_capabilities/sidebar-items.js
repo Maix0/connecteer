@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["connection","identity","middleware","pipeline","sealed"],"struct":["Pipeline"],"trait":["Connection","Middleware"]};
+window.SIDEBAR_ITEMS = {"macro":["between_yields_lifetime","iter_generator"],"mod":["connection","gen_utils","identity","middleware","pipeline","sealed"],"struct":["Pipeline"],"trait":["Connection","Middleware"]};

@@ -178,50 +178,11 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::connection::Connection;
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::between_yields_lifetime;
+<span class="kw">use </span><span class="kw">crate</span>::connection::Connection;
+<span class="kw">use </span><span class="kw">crate</span>::gen_utils::UnsafeHigherRankGenerator;
 <span class="kw">use </span>core::ops::{Generator, GeneratorState};
 <span class="kw">use </span>serde::{de::DeserializeOwned, Serialize};
-
-<span class="kw">fn </span>fuck_mut&lt;<span class="lifetime">&#39;b</span>, T: <span class="question-mark">?</span>Sized&gt;(v: <span class="kw-2">&amp;mut </span>T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span>T {
-    <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(v <span class="kw">as </span><span class="kw-2">*mut </span>T) }
-}
 
 <span class="doccomment">/// This is a trait that prevent an &quot;outsider&quot; to call some methods on trait, while still allowing
 /// you to implement those traits
@@ -239,32 +200,24 @@
     /// way to &quot;passthrough&quot; errors made by middleware after them
     </span><span class="kw">type </span>UnwrapError;
 
-    <span class="kw">type </span>Ctx;
+    <span class="kw">type </span>Ctx: Unpin;
     <span class="kw">type </span>Next: Connection&lt;<span class="self">Self</span>::Message&gt;;
 
-    <span class="kw">type </span>WrapGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt;: Generator&lt;
+    <span class="kw">type </span>WrapGen: <span class="kw">for</span>&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>&gt; Generator&lt;
             (<span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx),
             Yield = <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Message, <span class="self">Self</span>::WrapError&gt;,
             Return = (),
-        &gt; + <span class="lifetime">&#39;g
-    </span><span class="kw">where
-        </span><span class="self">Self</span>::Ctx: <span class="lifetime">&#39;c</span>,
-        <span class="self">Self</span>: <span class="lifetime">&#39;s</span>;
-    <span class="kw">type </span>UnwrapGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt;: Generator&lt;
+        &gt; + <span class="lifetime">&#39;static</span>;
+    <span class="kw">type </span>UnwrapGen: <span class="kw">for</span>&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>&gt; Generator&lt;
             (<span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx),
             Yield = <span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::UnwrapError&gt;,
             Return = (),
-        &gt; + <span class="lifetime">&#39;g
-    </span><span class="kw">where
-        </span><span class="self">Self</span>: <span class="lifetime">&#39;s</span>,
-        <span class="self">Self</span>::Ctx: <span class="lifetime">&#39;c</span>;
+        &gt; + <span class="lifetime">&#39;static</span>;
     <span class="doccomment">/// Transform an [`Message`](Self::Message) into a Unwrapped `Payload`
-    </span><span class="kw">fn </span>wrap&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>, Uncallable: PublicUncallable&gt;(msg: Payload) -&gt; <span class="self">Self</span>::WrapGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;;
+    </span><span class="kw">fn </span>wrap&lt;Uncallable: PublicUncallable&gt;(msg: Payload) -&gt; <span class="self">Self</span>::WrapGen;
 
     <span class="doccomment">/// Transform an `Payload` into a Wrapped [`Message`](Self::Message)
-    </span><span class="kw">fn </span>unwrap&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>, Uncallable: PublicUncallable&gt;(
-        msg: <span class="self">Self</span>::Message,
-    ) -&gt; <span class="self">Self</span>::UnwrapGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;;
+    </span><span class="kw">fn </span>unwrap&lt;Uncallable: PublicUncallable&gt;(msg: <span class="self">Self</span>::Message) -&gt; <span class="self">Self</span>::UnwrapGen;
 
     <span class="doccomment">/// This function allows the system to bubble-up an error when wrapping a [`Message`](Self::Message)
     </span><span class="kw">fn </span>create_wrap_error&lt;Uncallable: PublicUncallable&gt;(
@@ -276,12 +229,6 @@
     </span><span class="kw">fn </span>create_unwrap_error&lt;Uncallable: PublicUncallable&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         err: &lt;<span class="self">Self</span>::Next <span class="kw">as </span>Connection&lt;<span class="self">Self</span>::Message&gt;&gt;::ReceiveError,
-    ) -&gt; <span class="self">Self</span>::UnwrapError;
-
-    <span class="doccomment">/// This function allows the system to bubble-up an error
-    </span><span class="kw">fn </span>create_unwrap_error_passthrough&lt;Uncallable: PublicUncallable&gt;(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        err: &lt;<span class="self">Self</span>::Next <span class="kw">as </span>Connection&lt;<span class="self">Self</span>::Message&gt;&gt;::NextError,
     ) -&gt; <span class="self">Self</span>::UnwrapError;
 
     <span class="kw">fn </span>get_next&lt;Uncallable: PublicUncallable&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Next;
@@ -306,130 +253,109 @@
     <span class="kw">type </span>ReceiveError = M::UnwrapError;
     <span class="kw">type </span>NextError = &lt;M::Next <span class="kw">as </span>Connection&lt;M::Message&gt;&gt;::ReceiveError;
 
-    <span class="kw">type </span>SendGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt; =
-        <span class="kw">impl </span>Generator&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>,<span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx), Yield = <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Wrapped, <span class="self">Self</span>::SendError&gt;, Return = ()&gt; + <span class="lifetime">&#39;g </span><span class="kw">where </span><span class="self">Self</span>::Ctx: <span class="lifetime">&#39;c</span>, <span class="self">Self</span>: <span class="lifetime">&#39;s</span>;
-    <span class="kw">type </span>ReceiveGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt;=
-        <span class="kw">impl </span>Generator&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>,<span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx), Yield = <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Wrapped, <span class="self">Self</span>::ReceiveError&gt;, Return = ()&gt; + <span class="lifetime">&#39;g </span><span class="kw">where </span><span class="self">Self</span>::Ctx: <span class="lifetime">&#39;c</span>, <span class="self">Self</span>: <span class="lifetime">&#39;s</span>;
+    <span class="kw">type </span>SendGen = <span class="kw">impl for</span>&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>&gt; Generator&lt;
+            (<span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx),
+            Yield = <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Wrapped, <span class="self">Self</span>::SendError&gt;,
+            Return = (),
+        &gt; + <span class="lifetime">&#39;static</span>;
 
-    <span class="attr">#[allow(unreachable_code)]
-    </span><span class="kw">fn </span>send&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;(
-        input: Payload,
-        <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable,
-    ) -&gt; <span class="self">Self</span>::SendGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;
-    <span class="kw">where
-        </span><span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
-        <span class="self">Self</span>::Ctx: <span class="lifetime">&#39;b</span>,
-    {
-        <span class="kw">move </span>|(<span class="kw-2">mut </span>s, <span class="kw-2">mut </span>ctx): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx)| {
-            <span class="kw">let </span><span class="kw-2">mut </span>gen_ptr = M::wrap::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(input);
+    <span class="kw">type </span>ReceiveGen = <span class="kw">impl for</span>&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>&gt; Generator&lt;
+            (<span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx),
+            Yield = <span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::ReceiveError&gt;,
+            Return = (),
+        &gt; + <span class="lifetime">&#39;static</span>;
+
+    <span class="attr">#[allow(clippy::no_effect_underscore_binding)]
+    </span><span class="kw">fn </span>send(input: Payload, <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable) -&gt; <span class="self">Self</span>::SendGen {
+        <span class="kw">let </span>gen = <span class="kw">static move </span>|(s, ctx): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx)| {
+            <span class="macro">between_yields_lifetime!</span>(<span class="kw">as </span>lt);
+            <span class="kw">let </span>(<span class="kw-2">mut </span>s, <span class="kw-2">mut </span>ctx) = (lt.adjust(s), lt.adjust(ctx));
+
+            <span class="kw">let </span><span class="kw-2">mut </span>gen_ptr = <span class="macro">::core::pin::pin!</span>(M::wrap::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(input));
             <span class="kw">let </span>_pin = core::marker::PhantomPinned;
+
             <span class="kw">loop </span>{
-                <span class="kw">match unsafe </span>{ core::pin::Pin::new_unchecked(fuck_mut(<span class="kw-2">&amp;mut </span>gen_ptr)) }
-                    .resume((fuck_mut(s), fuck_mut(ctx)))
-                {
+                <span class="kw">match </span>gen_ptr.as_mut().resume((s, ctx)) {
                     GeneratorState::Yielded(<span class="prelude-val">Ok</span>(v)) =&gt; {
-                        <span class="kw">let </span><span class="kw-2">mut </span>ret = &lt;M::Next&gt;::send(v, <span class="kw">crate</span>::sealed::PublicUncallable);
-                        <span class="kw">let </span>next = fuck_mut(s.get_next::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;());
-                        <span class="kw">while let </span>GeneratorState::Yielded(v) =
-                            <span class="kw">unsafe </span>{ core::pin::Pin::new_unchecked(fuck_mut(<span class="kw-2">&amp;mut </span>ret)) }.resume((
-                                fuck_mut(next),
-                                M::get_next_ctx::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(fuck_mut(ctx)),
-                            ))
-                        {
+                        <span class="kw">let </span><span class="kw-2">mut </span>ret =
+                            <span class="macro">core::pin::pin!</span>(&lt;M::Next&gt;::send(v, <span class="kw">crate</span>::sealed::PublicUncallable));
+                        <span class="kw">let </span><span class="kw-2">mut </span>ret = ret.as_mut();
+                        <span class="kw">let </span><span class="kw-2">mut </span>next = s.get_next::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;();
+                        <span class="kw">while let </span>GeneratorState::Yielded(v) = ret.as_mut().resume((
+                            next,
+                            M::get_next_ctx::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(ctx),
+                        )) {
                             <span class="kw">let </span>y = v.map_err(|e| {
                                 s.create_wrap_error::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(e)
                             });
-                            <span class="kw">let </span>tmp = <span class="kw">yield </span>y;
-                            s = tmp.<span class="number">0</span>;
-                            ctx = tmp.<span class="number">1</span>;
+
+                            (s, ctx) = <span class="macro">yield_!</span>(y);
+                            next = s.get_next::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;();
                         }
                         <span class="kw">continue</span>;
                     }
                     GeneratorState::Yielded(<span class="prelude-val">Err</span>(e)) =&gt; {
-                        <span class="kw">let </span>tmp = <span class="kw">yield </span><span class="prelude-val">Err</span>(e);
-                        s = tmp.<span class="number">0</span>;
-                        ctx = tmp.<span class="number">1</span>;
+                        (s, ctx) = <span class="macro">yield_!</span>(<span class="prelude-val">Err</span>(e));
                     }
                     GeneratorState::Complete(()) =&gt; <span class="kw">return</span>,
                 };
             }
-        }
+        };
+        <span class="kw">unsafe </span>{ UnsafeHigherRankGenerator::new(gen) }
     }
 
-    <span class="attr">#[allow(unreachable_code, dead_code, unused)]
-    </span><span class="kw">fn </span>receive&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;(
-        output: <span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::NextError&gt;,
-        <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable,
-    ) -&gt; <span class="self">Self</span>::ReceiveGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;
-    <span class="kw">where
-        </span><span class="self">Self</span>::Ctx: <span class="lifetime">&#39;b</span>,
-        <span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
-    {
-        |(s, ctx)| {
-            <span class="kw">yield </span><span class="macro">todo!</span>();
-        }
-        <span class="comment">/*
-            output
-                .map(|o| {
-                    o.map(|o| {
-                        let next = self.get_next::&lt;sealed::PublicUncallable&gt;();
-                        let is_final = next.is_final();
+    <span class="attr">#[allow(clippy::no_effect_underscore_binding)]
+    </span><span class="kw">fn </span>receive(output: <span class="self">Self</span>::Wrapped, <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable) -&gt; <span class="self">Self</span>::ReceiveGen <span class="kw">where
+    </span>{
+        <span class="kw">let </span>gen = <span class="kw">static move </span>|(s, ctx): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span><span class="kw-2">mut </span><span class="self">Self</span>::Ctx)| {
+            <span class="macro">between_yields_lifetime!</span>(<span class="kw">as </span>lt);
+            <span class="kw">let </span>(<span class="kw-2">mut </span>s, <span class="kw-2">mut </span>ctx) = (lt.adjust(s), lt.adjust(ctx));
+            <span class="kw">let </span><span class="kw-2">mut </span>s_ptr = s <span class="kw">as </span><span class="kw-2">*mut </span><span class="self">Self</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>ctx_ptr = ctx <span class="kw">as </span><span class="kw-2">*mut </span><span class="self">Self</span>::Ctx;
 
-                        let v: Result&lt;Option&lt;_&gt;, _&gt; = if is_final {
-                            let copy: Payload = unsafe { core::mem::transmute_copy(&amp;o) };
-                            core::mem::forget(o);
-                            /*unsafe {
-                                core::mem::transmute::&lt;
-                                    _,
-                                    &amp;mut dyn crate::Connection&lt;
-                                        Wrapper&lt;Payload&gt;,
-                                        (),
-                                        Wrapped = Payload,
-                                        SendError = core::convert::Infallible,
-                                        ReceiveError = core::convert::Infallible,
-                                        NextError = core::convert::Infallible,
-                                    &gt;,
-                                &gt;(next)
-                            }*/
-                            next.receive(Ok(Some(copy)), &amp;mut (), sealed::PublicUncallable)
-                                .map(|o| {
-                                    o.map(|v| {
-                                        debug_assert_eq!(
-                                            core::mem::size_of_val(&amp;v),
-                                            core::mem::size_of::&lt;Self::Wrapped&gt;()
-                                        );
-                                        debug_assert_eq!(
-                                            core::mem::align_of_val(&amp;v),
-                                            core::mem::align_of::&lt;Self::Wrapped&gt;()
-                                        );
-                                        let copy: M::Message = unsafe { core::mem::transmute_copy(&amp;v) };
-                                        core::mem::forget(v);
-                                        copy
-                                    })
-                                })
-                                .map_err(|e| match e {})
-                        } else {
-                            next.receive(Ok(Some(o)), ctx, sealed::PublicUncallable)
-                                .map_err(|e| {
-                                    self.create_unwrap_error_passthrough::&lt;sealed::PublicUncallable&gt;(e)
-                                })
-                        };
-                        v
-                    })
-                })
-                .map(|e| {
-                    e.map_err(|e| self.create_unwrap_error_passthrough::&lt;sealed::PublicUncallable&gt;(e))
-                })
-                .map(|e| match e {
-                    Ok(Ok(v)) =&gt; Ok(v),
-                    Ok(Err(e)) | Err(e) =&gt; Err(e),
-                })
-                .transpose()?
-                .flatten()
-                .map(|v| self.unwrap::&lt;sealed::PublicUncallable&gt;(v, ctx))
-                .transpose()
-                .map(core::option::Option::flatten)
-        */
-    </span>}
+            <span class="kw">let </span><span class="kw-2">mut </span>next = M::get_next::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(s);
+            <span class="kw">let </span><span class="kw-2">mut </span>next_ctx = M::get_next_ctx::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(ctx);
+            <span class="kw">let </span><span class="kw-2">mut </span>gen_ptr =
+                <span class="macro">core::pin::pin!</span>(&lt;M::Next&gt;::receive(output, <span class="kw">crate</span>::sealed::PublicUncallable));
+            <span class="kw">let </span>_pin = core::marker::PhantomPinned;
+
+            <span class="kw">loop </span>{
+                <span class="kw">match </span>gen_ptr.as_mut().resume((next, next_ctx)) {
+                    GeneratorState::Yielded(<span class="prelude-val">Ok</span>(v)) =&gt; {
+                        <span class="kw">let </span><span class="kw-2">mut </span>ret =
+                            <span class="macro">core::pin::pin!</span>(M::unwrap::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(v));
+                        <span class="comment">// FROM HERE UNTIL THE END OF THE BLOCK, YOU AREN&#39;T ALLOWED TO USE EITHER
+                        // `next` or `next_ctx`
+                        </span><span class="kw">while let </span>GeneratorState::Yielded(v) = ret
+                            .as_mut()
+                            .resume((<span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>s_ptr }, <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>ctx_ptr }))
+                        {
+                            (s, ctx) = <span class="macro">yield_!</span>(v);
+
+                            s_ptr = s <span class="kw">as _</span>;
+                            ctx_ptr = ctx <span class="kw">as _</span>;
+                            next = M::get_next::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(s);
+                            next_ctx = M::get_next_ctx::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(ctx);
+                        }
+                    }
+                    GeneratorState::Yielded(<span class="prelude-val">Err</span>(e)) =&gt; {
+                        (s, ctx) =
+                            <span class="macro">yield_!</span>(<span class="prelude-val">Err</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>s_ptr }
+                                .create_unwrap_error::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(e)));
+                        s_ptr = s <span class="kw">as _</span>;
+                        ctx_ptr = ctx <span class="kw">as _</span>;
+                        next = M::get_next::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(s);
+                        next_ctx = M::get_next_ctx::&lt;<span class="kw">crate</span>::sealed::PublicUncallable&gt;(ctx);
+                    }
+                    GeneratorState::Complete(()) =&gt; <span class="kw">return</span>,
+                };
+            }
+        };
+        <span class="kw">unsafe </span>{ UnsafeHigherRankGenerator::new(gen) }
+    }
 }
-</code></pre></div></section></main></body></html>
+
+<span class="comment">/*
+*
+*/
+</span></code></pre></div></section></main></body></html>

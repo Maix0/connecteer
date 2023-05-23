@@ -118,30 +118,6 @@
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::connection::Connection;
 <span class="kw">use </span><span class="kw">crate</span>::middleware::{Middleware, PublicUncallable};
 <span class="kw">use </span>core::ops::{Generator, GeneratorState};
@@ -206,28 +182,14 @@
     <span class="kw">type </span>SendError = core::convert::Infallible;
     <span class="kw">type </span>ReceiveError = core::convert::Infallible;
 
-    <span class="kw">type </span>SendGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt; = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::SendError&gt;&gt;;
-    <span class="kw">type </span>ReceiveGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt; = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::ReceiveError&gt;&gt;;
-    <span class="kw">fn </span>send&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;(
-        input: Wrapper&lt;Payload&gt;,
-        <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable,
-    ) -&gt; <span class="self">Self</span>::SendGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;
-    <span class="kw">where
-        </span><span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
-        <span class="self">Self</span>::Ctx: <span class="lifetime">&#39;b</span>,
-    {
+    <span class="kw">type </span>SendGen = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::SendError&gt;&gt;;
+    <span class="kw">type </span>ReceiveGen = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;Wrapper&lt;Payload&gt;, <span class="self">Self</span>::ReceiveError&gt;&gt;;
+    <span class="kw">fn </span>send(input: Wrapper&lt;Payload&gt;, <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable) -&gt; <span class="self">Self</span>::SendGen {
         SingleGen(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(input.into_inner())))
     }
 
-    <span class="kw">fn </span>receive&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;(
-        output: <span class="prelude-ty">Result</span>&lt;Wrapper&lt;Payload&gt;, <span class="self">Self</span>::NextError&gt;,
-        <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable,
-    ) -&gt; <span class="self">Self</span>::ReceiveGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt;
-    <span class="kw">where
-        </span><span class="self">Self</span>::Ctx: <span class="lifetime">&#39;b</span>,
-        <span class="self">Self</span>: <span class="lifetime">&#39;a</span>,
-    {
-        SingleGen(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(output.unwrap().into_inner())))
+    <span class="kw">fn </span>receive(output: <span class="self">Self</span>::Wrapped, <span class="kw">_</span>: <span class="kw">crate</span>::sealed::PublicUncallable) -&gt; <span class="self">Self</span>::ReceiveGen {
+        SingleGen(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(Wrapper(output))))
     }
 }
 <span class="doccomment">/// This is the &quot;Base&quot; of all [`Middleware`](crate::Middleware) chain.
@@ -243,16 +205,14 @@
     <span class="kw">type </span>Ctx = ();
     <span class="kw">type </span>Next = Identity;
 
-    <span class="kw">type </span>WrapGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt; = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Message, <span class="self">Self</span>::WrapError&gt;&gt;;
-    <span class="kw">type </span>UnwrapGen&lt;<span class="lifetime">&#39;s</span>, <span class="lifetime">&#39;c</span>, <span class="lifetime">&#39;g</span>&gt; = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::UnwrapError&gt;&gt;;
+    <span class="kw">type </span>WrapGen = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Message, <span class="self">Self</span>::WrapError&gt;&gt;;
+    <span class="kw">type </span>UnwrapGen = SingleGen&lt;<span class="prelude-ty">Result</span>&lt;Payload, <span class="self">Self</span>::UnwrapError&gt;&gt;;
 
-    <span class="kw">fn </span>wrap&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>, Uncallable: PublicUncallable&gt;(msg: Payload) -&gt; <span class="self">Self</span>::WrapGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt; {
+    <span class="kw">fn </span>wrap&lt;Uncallable: PublicUncallable&gt;(msg: Payload) -&gt; <span class="self">Self</span>::WrapGen {
         SingleGen(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(Wrapper(msg))))
     }
 
-    <span class="kw">fn </span>unwrap&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>, Uncallable: PublicUncallable&gt;(
-        msg: <span class="self">Self</span>::Message,
-    ) -&gt; <span class="self">Self</span>::UnwrapGen&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;g</span>&gt; {
+    <span class="kw">fn </span>unwrap&lt;Uncallable: PublicUncallable&gt;(msg: <span class="self">Self</span>::Message) -&gt; <span class="self">Self</span>::UnwrapGen {
         SingleGen(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(msg.into_inner())))
     }
 
@@ -269,14 +229,6 @@
     ) -&gt; <span class="self">Self</span>::UnwrapError {
         err
     }
-
-    <span class="kw">fn </span>create_unwrap_error_passthrough&lt;Uncallable: PublicUncallable&gt;(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        err: core::convert::Infallible,
-    ) -&gt; <span class="self">Self</span>::UnwrapError {
-        err
-    }
-
     <span class="kw">fn </span>get_next_ctx&lt;Uncallable: PublicUncallable&gt;(
         <span class="kw">_</span>: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Ctx,
     ) -&gt; <span class="kw-2">&amp;mut </span>&lt;<span class="self">Self</span>::Next <span class="kw">as </span>Connection&lt;<span class="self">Self</span>::Message&gt;&gt;::Ctx {

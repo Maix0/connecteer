@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["fuck_mut"],"struct":["Pipeline"]};
+window.SIDEBAR_ITEMS = {"struct":["Pipeline","StructGen"]};
