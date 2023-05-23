@@ -1,12 +1,12 @@
 use core::ops::Generator;
 
-pub trait ConnectionGenerator<Connection, Context>
+pub trait ConnecteerGenerator<Connection, Context>
 where
     Self: for<'a> Generator<(&'a mut Connection, &'a mut Context), Return = ()>,
 {
 }
 
-impl<G: ?Sized, Connection, Context> ConnectionGenerator<Connection, Context> for G where
+impl<G: ?Sized, Connection, Context> ConnecteerGenerator<Connection, Context> for G where
     Self: for<'a> Generator<(&'a mut Connection, &'a mut Context), Return = ()>
 {
 }

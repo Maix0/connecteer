@@ -15,12 +15,12 @@ pub trait Connection<Payload: Serialize + DeserializeOwned>:
     type ReceiveError;
     type NextError;
 
-    type SendGen: crate::gen_utils::ConnectionGenerator<
+    type SendGen: crate::gen_utils::ConnecteerGenerator<
         Self,
         Self::Ctx,
         Yield = Result<Self::Wrapped, Self::SendError>,
     >;
-    type ReceiveGen: crate::gen_utils::ConnectionGenerator<
+    type ReceiveGen: crate::gen_utils::ConnecteerGenerator<
         Self,
         Self::Ctx,
         Yield = Result<Payload, Self::ReceiveError>,

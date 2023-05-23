@@ -24,12 +24,12 @@ pub trait Middleware<Payload: Serialize + DeserializeOwned + 'static>:
     type Ctx: Unpin;
     type Next: Connection<Self::Message>;
 
-    type WrapGen: crate::gen_utils::ConnectionGenerator<
+    type WrapGen: crate::gen_utils::ConnecteerGenerator<
         Self,
         Self::Ctx,
         Yield = Result<Self::Message, Self::WrapError>,
     >;
-    type UnwrapGen: crate::gen_utils::ConnectionGenerator<
+    type UnwrapGen: crate::gen_utils::ConnecteerGenerator<
         Self,
         Self::Ctx,
         Yield = Result<Payload, Self::UnwrapError>,
@@ -74,12 +74,12 @@ impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeO
     type ReceiveError = M::UnwrapError;
     type NextError = <M::Next as Connection<M::Message>>::ReceiveError;
 
-    type SendGen = impl crate::gen_utils::ConnectionGenerator<
+    type SendGen = impl crate::gen_utils::ConnecteerGenerator<
         Self,
         Self::Ctx,
         Yield = Result<Self::Wrapped, Self::SendError>,
     >;
-    type ReceiveGen = impl crate::gen_utils::ConnectionGenerator<
+    type ReceiveGen = impl crate::gen_utils::ConnecteerGenerator<
         Self,
         Self::Ctx,
         Yield = Result<Payload, Self::ReceiveError>,
