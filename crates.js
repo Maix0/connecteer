@@ -1,1 +1,0 @@
-window.ALL_CRATES = ["capabilities_test1","connecteer_capabilities","connecteer_translation","json_messages","rmp_messages"];

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["yield_"],"opaque":[""],"trait":["Middleware","PublicUncallable"]};
