@@ -5,7 +5,9 @@ use serde::{de::DeserializeOwned, Serialize};
 /// You can't implement this trait, you need to let the blanket implementation do its job by
 /// implementing [`Middleware`](crate::Middleware) on your types
 /// This type isn't used directly by the consumer, it is only used by this crate
-pub trait Connection<Payload: Serialize + DeserializeOwned>: sealed::Sealed<Payload> {
+pub trait Connection<Payload: Serialize + DeserializeOwned>:
+    sealed::Sealed<Payload> + Unpin
+{
     type Wrapped: Serialize + DeserializeOwned;
 
     type Ctx: Unpin;

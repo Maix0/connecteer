@@ -10,7 +10,7 @@ pub trait PublicUncallable: crate::sealed::PublicUncallableSealed {}
 
 impl PublicUncallable for crate::sealed::PublicUncallable {}
 
-pub trait Middleware<Payload: Serialize + DeserializeOwned> {
+pub trait Middleware<Payload: Serialize + DeserializeOwned>: Unpin {
     /// This is the message type that is outputted by the middleware when sending messages (and
     /// inputted when receiving messages)
     type Message: Serialize + DeserializeOwned;
@@ -58,12 +58,12 @@ pub trait Middleware<Payload: Serialize + DeserializeOwned> {
     ) -> &mut <Self::Next as Connection<Self::Message>>::Ctx;
 }
 
-impl<M: Middleware<Payload>, Payload: Serialize + DeserializeOwned + 'static>
+impl<M: Middleware<Payload> + Unpin, Payload: Serialize + DeserializeOwned + 'static>
     crate::sealed::Sealed<Payload> for M
 {
 }
 
-impl<M: Middleware<Payload> + 'static, Payload: Serialize + DeserializeOwned + 'static>
+impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeOwned + 'static>
     Connection<Payload> for M
 {
     type Ctx = M::Ctx;
