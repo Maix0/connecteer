@@ -1,6 +1,5 @@
-use crate::between_yields_lifetime;
 use crate::connection::Connection;
-use crate::gen_utils::UnsafeHigherRankGenerator;
+use crate::higher_order_gen;
 use core::ops::{Generator, GeneratorState};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -10,7 +9,9 @@ pub trait PublicUncallable: crate::sealed::PublicUncallableSealed {}
 
 impl PublicUncallable for crate::sealed::PublicUncallable {}
 
-pub trait Middleware<Payload: Serialize + DeserializeOwned>: Unpin {
+pub trait Middleware<Payload: Serialize + DeserializeOwned + 'static>:
+    Unpin + Sized + 'static
+{
     /// This is the message type that is outputted by the middleware when sending messages (and
     /// inputted when receiving messages)
     type Message: Serialize + DeserializeOwned;
@@ -23,16 +24,16 @@ pub trait Middleware<Payload: Serialize + DeserializeOwned>: Unpin {
     type Ctx: Unpin;
     type Next: Connection<Self::Message>;
 
-    type WrapGen: for<'s, 'c> Generator<
-            (&'s mut Self, &'c mut Self::Ctx),
-            Yield = Result<Self::Message, Self::WrapError>,
-            Return = (),
-        > + 'static;
-    type UnwrapGen: for<'s, 'c> Generator<
-            (&'s mut Self, &'c mut Self::Ctx),
-            Yield = Result<Payload, Self::UnwrapError>,
-            Return = (),
-        > + 'static;
+    type WrapGen: crate::gen_utils::ConnectionGenerator<
+        Self,
+        Self::Ctx,
+        Yield = Result<Self::Message, Self::WrapError>,
+    >;
+    type UnwrapGen: crate::gen_utils::ConnectionGenerator<
+        Self,
+        Self::Ctx,
+        Yield = Result<Payload, Self::UnwrapError>,
+    >;
     /// Transform an [`Message`](Self::Message) into a Unwrapped `Payload`
     fn wrap<Uncallable: PublicUncallable>(msg: Payload) -> Self::WrapGen;
 
@@ -73,63 +74,52 @@ impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeO
     type ReceiveError = M::UnwrapError;
     type NextError = <M::Next as Connection<M::Message>>::ReceiveError;
 
-    type SendGen = impl for<'s, 'c> Generator<
-            (&'s mut Self, &'c mut Self::Ctx),
-            Yield = Result<Self::Wrapped, Self::SendError>,
-            Return = (),
-        > + 'static;
-
-    type ReceiveGen = impl for<'s, 'c> Generator<
-            (&'s mut Self, &'c mut Self::Ctx),
-            Yield = Result<Payload, Self::ReceiveError>,
-            Return = (),
-        > + 'static;
+    type SendGen = impl crate::gen_utils::ConnectionGenerator<
+        Self,
+        Self::Ctx,
+        Yield = Result<Self::Wrapped, Self::SendError>,
+    >;
+    type ReceiveGen = impl crate::gen_utils::ConnectionGenerator<
+        Self,
+        Self::Ctx,
+        Yield = Result<Payload, Self::ReceiveError>,
+    >;
 
     #[allow(clippy::no_effect_underscore_binding)]
     fn send(input: Payload, _: crate::sealed::PublicUncallable) -> Self::SendGen {
-        let gen = static move |(s, ctx): (&'_ mut Self, &'_ mut Self::Ctx)| {
-            between_yields_lifetime!(as lt);
-            let (mut s, mut ctx) = (lt.adjust(s), lt.adjust(ctx));
-
+        higher_order_gen!(static move |(this, ctx): (&mut Self, &mut Self::Ctx)| {
             let mut gen_ptr = ::core::pin::pin!(M::wrap::<crate::sealed::PublicUncallable>(input));
-            let _pin = core::marker::PhantomPinned;
-
             loop {
-                match gen_ptr.as_mut().resume((s, ctx)) {
+                match gen_ptr.as_mut().resume((this, ctx)) {
                     GeneratorState::Yielded(Ok(v)) => {
                         let mut ret =
                             core::pin::pin!(<M::Next>::send(v, crate::sealed::PublicUncallable));
                         let mut ret = ret.as_mut();
-                        let mut next = s.get_next::<crate::sealed::PublicUncallable>();
-                        while let GeneratorState::Yielded(v) = ret.as_mut().resume((
+                        let mut next = this.get_next::<crate::sealed::PublicUncallable>();
+                        while let GeneratorState::Yielded(val) = ret.as_mut().resume((
                             next,
                             M::get_next_ctx::<crate::sealed::PublicUncallable>(ctx),
                         )) {
-                            let y = v.map_err(|e| {
-                                s.create_wrap_error::<crate::sealed::PublicUncallable>(e)
-                            });
-
-                            (s, ctx) = yield_!(y);
-                            next = s.get_next::<crate::sealed::PublicUncallable>();
+                            yield_!(val.map_err(|e| {
+                                this.create_wrap_error::<crate::sealed::PublicUncallable>(e)
+                            }));
+                            next = this.get_next::<crate::sealed::PublicUncallable>();
                         }
                         continue;
                     }
                     GeneratorState::Yielded(Err(e)) => {
-                        (s, ctx) = yield_!(Err(e));
+                        yield_!(Err::<Self::Wrapped, Self::SendError>(e));
                     }
                     GeneratorState::Complete(()) => return,
                 };
             }
-        };
-        unsafe { UnsafeHigherRankGenerator::new(gen) }
+        })
     }
 
     #[allow(clippy::no_effect_underscore_binding)]
     fn receive(output: Self::Wrapped, _: crate::sealed::PublicUncallable) -> Self::ReceiveGen where
     {
-        let gen = static move |(s, ctx): (&'_ mut Self, &'_ mut Self::Ctx)| {
-            between_yields_lifetime!(as lt);
-            let (mut s, mut ctx) = (lt.adjust(s), lt.adjust(ctx));
+        higher_order_gen!(static move |(s, ctx): (&mut Self, &mut Self::Ctx)| {
             let mut s_ptr = s as *mut Self;
             let mut ctx_ptr = ctx as *mut Self::Ctx;
 
@@ -137,7 +127,6 @@ impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeO
             let mut next_ctx = M::get_next_ctx::<crate::sealed::PublicUncallable>(ctx);
             let mut gen_ptr =
                 core::pin::pin!(<M::Next>::receive(output, crate::sealed::PublicUncallable));
-            let _pin = core::marker::PhantomPinned;
 
             loop {
                 match gen_ptr.as_mut().resume((next, next_ctx)) {
@@ -150,7 +139,7 @@ impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeO
                             .as_mut()
                             .resume((unsafe { &mut *s_ptr }, unsafe { &mut *ctx_ptr }))
                         {
-                            (s, ctx) = yield_!(v);
+                            yield_!(v);
 
                             s_ptr = s as _;
                             ctx_ptr = ctx as _;
@@ -159,9 +148,10 @@ impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeO
                         }
                     }
                     GeneratorState::Yielded(Err(e)) => {
-                        (s, ctx) =
-                            yield_!(Err(unsafe { &mut *s_ptr }
-                                .create_unwrap_error::<crate::sealed::PublicUncallable>(e)));
+                        yield_!(Err::<Payload, Self::ReceiveError>(
+                            unsafe { &mut *s_ptr }
+                                .create_unwrap_error::<crate::sealed::PublicUncallable>(e)
+                        ));
                         s_ptr = s as _;
                         ctx_ptr = ctx as _;
                         next = M::get_next::<crate::sealed::PublicUncallable>(s);
@@ -170,8 +160,7 @@ impl<M: Middleware<Payload> + Unpin + 'static, Payload: Serialize + DeserializeO
                     GeneratorState::Complete(()) => return,
                 };
             }
-        };
-        unsafe { UnsafeHigherRankGenerator::new(gen) }
+        })
     }
 }
 

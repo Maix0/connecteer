@@ -1,48 +1,66 @@
-use core::ops::{Generator, GeneratorState};
+use core::ops::Generator;
+
+pub trait ConnectionGenerator<Connection, Context>
+where
+    Self: for<'a> Generator<(&'a mut Connection, &'a mut Context), Return = ()>,
+{
+}
+
+impl<G: ?Sized, Connection, Context> ConnectionGenerator<Connection, Context> for G where
+    Self: for<'a> Generator<(&'a mut Connection, &'a mut Context), Return = ()>
+{
+}
 
 #[allow(clippy::type_complexity)]
-pub struct UnsafeHigherRankGenerator<'s, 'c, G, Conn, Ctx, Y, R>(
+#[doc(hidden)]
+pub struct UnsafeHigherRankGenerator<'s, G, Conn, Ctx, Y, R>(
     G,
-    ::core::marker::PhantomData<fn(&'s mut Conn, &'c mut Ctx) -> (Y, R)>,
+    ::core::marker::PhantomData<fn(&'s mut Conn, &'s mut Ctx) -> (Y, R)>,
 )
 where
     Conn: 's,
-    Ctx: 'c,
-    G: Generator<(&'s mut Conn, &'c mut Ctx), Yield = Y, Return = R>;
+    Ctx: 's,
+    G: Generator<(&'s mut Conn, &'s mut Ctx), Yield = Y, Return = R>;
 
-impl<'s, 'c, G, Conn, Ctx, Y, R> UnsafeHigherRankGenerator<'s, 'c, G, Conn, Ctx, Y, R>
+impl<'s, G, Conn, Ctx, Y, R> UnsafeHigherRankGenerator<'s, G, Conn, Ctx, Y, R>
 where
     Conn: 's,
-    Ctx: 'c,
-    G: Generator<(&'s mut Conn, &'c mut Ctx), Yield = Y, Return = R>,
+    Ctx: 's,
+    G: Generator<(&'s mut Conn, &'s mut Ctx), Yield = Y, Return = R>,
 {
+    #[doc(hidden)]
+    #[inline]
     pub unsafe fn new(g: G) -> Self {
         Self(g, core::marker::PhantomData)
     }
 }
 
-impl<'s, 'c, G, Conn, Ctx, Y, R> Generator<(&mut Conn, &mut Ctx)>
-    for UnsafeHigherRankGenerator<'s, 'c, G, Conn, Ctx, Y, R>
+impl<'s, G, Conn, Ctx, Y, R> Generator<(&mut Conn, &mut Ctx)>
+    for UnsafeHigherRankGenerator<'s, G, Conn, Ctx, Y, R>
 where
     Conn: 's,
-    Ctx: 'c,
-    G: Generator<(&'s mut Conn, &'c mut Ctx), Yield = Y, Return = R>,
+    Ctx: 's,
+    G: Generator<(&'s mut Conn, &'s mut Ctx), Yield = Y, Return = R>,
 {
     type Yield = Y;
     type Return = R;
 
+    #[inline]
     fn resume(
         self: ::core::pin::Pin<&mut Self>,
         cx: (&mut Conn, &mut Ctx),
-    ) -> GeneratorState<Y, R> {
+    ) -> ::core::ops::GeneratorState<Y, R> {
         unsafe { self.map_unchecked_mut(|it| &mut it.0) }
             .resume(unsafe { ::core::mem::transmute(cx) })
     }
 }
 
+#[doc(hidden)]
 pub struct BetweenYields();
 
 impl BetweenYields {
+    #[doc(hidden)]
+    #[inline]
     pub fn adjust<'between_yields, 'too_big, ResumeArg: ?Sized>(
         &'between_yields self,
         resume_arg: &'too_big mut ResumeArg,
@@ -55,25 +73,45 @@ impl BetweenYields {
 }
 
 #[macro_export]
-macro_rules! between_yields_lifetime {
-    ( as $lt:ident ) => {
+macro_rules! higher_order_gen {(
+    $($static_move:ident)*
+    |($arg1:ident, $arg2:ident) $(: (&mut $Type1:ty ,&mut $Type2:ty))? $(,)?|
+    $body:block $(,)?
+) => ({
+    // extra safety: ensure no un-macro-ed `yield`s remain the `$body`:
+    if false {
+        #[allow(unused_mut, deref_nullptr)]
+        let _: &dyn FnOnce(_) -> _ = &|(__arg1, __arg2) $(: (&mut $Type1, &mut $Type2))?| {
+            let (mut $arg1, mut $arg2) $(: (&mut $Type1, &mut $Type2))? = unsafe {(&mut *::core::ptr::null_mut(), &mut *::core::ptr::null_mut())};
+            macro_rules! yield_ {( $e:expr ) => ( ::core::mem::drop($e) )}
+            $body
+        };
+        loop {}
+    }
+    let gen = $($static_move)* |(__arg1, __arg2) $(: (&mut $Type1, &mut $Type2))?| {
         #[allow(unused_mut)]
-        let mut $lt = $crate::gen_utils::BetweenYields();
-        macro_rules! yield_ {
-            ( $e:expr ) => {
-                match (yield $e, $lt = $crate::gen_utils::BetweenYields()).0 {
-                    (a, b) => ($lt.adjust(a), $lt.adjust(b)),
-                }
-            };
-        }
+        let mut lt = $crate::gen_utils::BetweenYields();
+        #[allow(unused_mut)]
+        let (mut $arg1, mut $arg2) = (lt.adjust(__arg1), lt.adjust(__arg2));
+        macro_rules! yield_ {( $e:expr ) => ({
+            let (__arg1, __arg2) = yield $e;
+            lt = $crate::gen_utils::BetweenYields();
+            ($arg1, $arg2) = (lt.adjust(__arg1), lt.adjust(__arg2));
+        })}
+        $body
     };
-}
+    unsafe {
+        $crate::gen_utils::UnsafeHigherRankGenerator::new(gen)
+    }
+})}
 
 #[doc(hidden)]
+#[inline]
 pub fn gen_interface_check<G: Generator<(), Return = ()>>(g: G) -> G {
     g
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! iter_generator {
     (for $v:pat in $gen:block {$($t:tt)*}) => {
