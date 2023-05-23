@@ -68,3 +68,20 @@ macro_rules! between_yields_lifetime {
         }
     };
 }
+
+#[doc(hidden)]
+pub fn gen_interface_check<G: Generator<(), Return = ()>>(g: G) -> G {
+    g
+}
+
+#[macro_export]
+macro_rules! iter_generator {
+    (for $v:pat in $gen:block {$($t:tt)*}) => {
+        {
+            let mut __gen = ::core::pin::pin!($crate::gen_utils::gen_interface_check($gen));
+            while let ::core::ops::GeneratorState::Yielded($v) = ::core::ops::Generator::resume(__gen.as_mut(), ()) {
+                $($t)*
+            }
+        }
+    };
+}

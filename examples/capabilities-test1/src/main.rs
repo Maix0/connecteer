@@ -1,7 +1,5 @@
 #![feature(generators, generator_trait)]
 
-use std::ops::Generator;
-
 use connecteer_capabilities::*;
 
 fn main() {
@@ -9,24 +7,9 @@ fn main() {
 }
 
 pub fn test() {
-    let mut base = Pipeline::<Base, String>::new(
-        Base,
-        //id::IdMiddleware::new(log::LoggingMiddleware::new(Base)),
-        (),
-    );
-    //let mut base = log::LoggingMiddleware::new(Base);
-    let mut send_gen = base.send(String::new());
-    let mut send = unsafe { core::pin::Pin::new_unchecked(&mut send_gen) };
-    while let core::ops::GeneratorState::Yielded(v) = send.as_mut().resume(()) {
-        let v = v.unwrap();
-        println!("SENT: {v}");
-    }
-    drop(send_gen);
-    let mut rec = core::pin::pin!(base.receive(String::new()));
-    while let core::ops::GeneratorState::Yielded(v) = rec.as_mut().resume(()) {
-        let v = v.unwrap();
-        println!("RECV: {v}");
-    }
+    let mut base = Pipeline::<Base, String>::new(Base, ());
+    iter_generator!(for _ in { base.send(String::new()) } {});
+    iter_generator!(for _ in { base.receive(String::new()) } {});
 }
 /*
 mod id {
