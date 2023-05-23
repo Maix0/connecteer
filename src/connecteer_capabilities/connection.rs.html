@@ -28,6 +28,8 @@
 <a href="#28" id="28">28</a>
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::sealed;
 <span class="kw">use </span>core::ops::Generator;
 <span class="kw">use </span>serde::{de::DeserializeOwned, Serialize};
@@ -35,7 +37,9 @@
 <span class="doccomment">/// You can&#39;t implement this trait, you need to let the blanket implementation do its job by
 /// implementing [`Middleware`](crate::Middleware) on your types
 /// This type isn&#39;t used directly by the consumer, it is only used by this crate
-</span><span class="kw">pub trait </span>Connection&lt;Payload: Serialize + DeserializeOwned&gt;: sealed::Sealed&lt;Payload&gt; {
+</span><span class="kw">pub trait </span>Connection&lt;Payload: Serialize + DeserializeOwned&gt;:
+    sealed::Sealed&lt;Payload&gt; + Unpin
+{
     <span class="kw">type </span>Wrapped: Serialize + DeserializeOwned;
 
     <span class="kw">type </span>Ctx: Unpin;

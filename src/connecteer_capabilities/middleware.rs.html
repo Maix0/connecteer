@@ -190,7 +190,7 @@
 
 <span class="kw">impl </span>PublicUncallable <span class="kw">for </span><span class="kw">crate</span>::sealed::PublicUncallable {}
 
-<span class="kw">pub trait </span>Middleware&lt;Payload: Serialize + DeserializeOwned&gt; {
+<span class="kw">pub trait </span>Middleware&lt;Payload: Serialize + DeserializeOwned&gt;: Unpin {
     <span class="doccomment">/// This is the message type that is outputted by the middleware when sending messages (and
     /// inputted when receiving messages)
     </span><span class="kw">type </span>Message: Serialize + DeserializeOwned;
@@ -238,12 +238,12 @@
     ) -&gt; <span class="kw-2">&amp;mut </span>&lt;<span class="self">Self</span>::Next <span class="kw">as </span>Connection&lt;<span class="self">Self</span>::Message&gt;&gt;::Ctx;
 }
 
-<span class="kw">impl</span>&lt;M: Middleware&lt;Payload&gt;, Payload: Serialize + DeserializeOwned + <span class="lifetime">&#39;static</span>&gt;
+<span class="kw">impl</span>&lt;M: Middleware&lt;Payload&gt; + Unpin, Payload: Serialize + DeserializeOwned + <span class="lifetime">&#39;static</span>&gt;
     <span class="kw">crate</span>::sealed::Sealed&lt;Payload&gt; <span class="kw">for </span>M
 {
 }
 
-<span class="kw">impl</span>&lt;M: Middleware&lt;Payload&gt; + <span class="lifetime">&#39;static</span>, Payload: Serialize + DeserializeOwned + <span class="lifetime">&#39;static</span>&gt;
+<span class="kw">impl</span>&lt;M: Middleware&lt;Payload&gt; + Unpin + <span class="lifetime">&#39;static</span>, Payload: Serialize + DeserializeOwned + <span class="lifetime">&#39;static</span>&gt;
     Connection&lt;Payload&gt; <span class="kw">for </span>M
 {
     <span class="kw">type </span>Ctx = M::Ctx;
